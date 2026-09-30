@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -58,21 +57,10 @@ fun ClipboardPanel(
     var showAddDialog by remember { mutableStateOf(false) }
     var newClipText by remember { mutableStateOf("") }
 
-    val quickSnippets = listOf(
-        "ሰላም ጤና ይስጥልኝ!",
-        "አመሰግናለሁ!",
-        "እንደምን አለህ?",
-        "መልካም ቀን!",
-        "እግዚአብሔር ይመስገን",
-        "እሺ",
-        "ይቅርታ",
-        "ደህና ሁን"
-    )
-
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .height(230.dp),
+            .height(220.dp),
         color = scheme.surfaceContainer
     ) {
         Column(
@@ -95,7 +83,7 @@ fun ClipboardPanel(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Smart Clipboard Manager",
+                        text = "Clipboard (የተቀዱ ቃላት)",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = scheme.keyTextColor
@@ -109,7 +97,7 @@ fun ClipboardPanel(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Add snippet",
+                            contentDescription = "Add custom copied text",
                             tint = scheme.accentColor,
                             modifier = Modifier.size(20.dp)
                         )
@@ -122,7 +110,7 @@ fun ClipboardPanel(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Clear recent",
+                                contentDescription = "Clear recent clips",
                                 tint = scheme.toolbarIconColor,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -143,7 +131,7 @@ fun ClipboardPanel(
                 }
             }
 
-            // Quick add snippet field
+            // Quick add custom text field
             if (showAddDialog) {
                 Row(
                     modifier = Modifier
@@ -154,7 +142,7 @@ fun ClipboardPanel(
                     OutlinedTextField(
                         value = newClipText,
                         onValueChange = { newClipText = it },
-                        placeholder = { Text("Enter phrase to pin...", fontSize = 12.sp) },
+                        placeholder = { Text("Save copied text...", fontSize = 12.sp) },
                         modifier = Modifier.weight(1f).height(46.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -181,47 +169,18 @@ fun ClipboardPanel(
                 }
             }
 
-            // Quick Expression Chips Row
-            Text(
-                text = "Quick Expressions (አጫጭር ቃላት):",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = scheme.subLabelColor,
-                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
-            )
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
-            ) {
-                items(quickSnippets) { snippet ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(scheme.keySpecialBackground)
-                            .clickable { onPasteClip(snippet) }
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = snippet,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = scheme.keyTextColor
-                        )
-                    }
-                }
-            }
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // Pinned & Recent Items list
+            // Strictly user's copied clips only (no canned suggestion phrases)
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Pinned Items
+                // Pinned Copied Items
                 if (pinnedClips.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Pinned Snippets (የተሰኩ):",
+                            text = "Pinned Copied Words (የተሰኩ):",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = scheme.accentColor
@@ -238,11 +197,11 @@ fun ClipboardPanel(
                     }
                 }
 
-                // Recent Items
+                // Recent Copied Items
                 if (recentClips.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Recently Copied:",
+                            text = "Recently Copied (በቅርብ የተቀዱ):",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = scheme.toolbarIconColor,
@@ -265,11 +224,11 @@ fun ClipboardPanel(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 12.dp),
+                                .padding(vertical = 24.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No items in clipboard history yet. Copy any text or use quick expressions!",
+                                text = "No copied text yet. Copy any word or phrase on your phone to paste it here.",
                                 fontSize = 12.sp,
                                 color = scheme.toolbarIconColor
                             )

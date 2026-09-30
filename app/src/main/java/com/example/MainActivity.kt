@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.engine.AmharicTransliterationEngine
 import com.example.engine.BackspaceStep
+import com.example.engine.EnglishSuggestionEngine
 import com.example.ime.KeyAction
 import com.example.ime.KeyboardLayout
 import com.example.ime.KeyboardOverlay
@@ -126,7 +127,9 @@ fun AmharicKeyboardMainApp(initialTab: Int = 0) {
     var sandboxShift by remember { mutableStateOf(ShiftState.OFF) }
     var sandboxMode by remember { mutableStateOf(TransliterationMode.AMHARIC) }
     var sandboxOverlay by remember { mutableStateOf(KeyboardOverlay.NONE) }
-    var recentClips by remember { mutableStateOf(listOf("ሰላም ለሁላችሁ!", "እንኳን ደህና መጣችሁ!", "አመሰግናለሁ")) }
+    var recentClips by remember { mutableStateOf(emptyList<String>()) }
+    var englishWordBuffer by remember { mutableStateOf("") }
+    var englishSuggestions by remember { mutableStateOf(emptyList<String>()) }
 
     // System IME status
     var isEnabledInSystem by remember { mutableStateOf(false) }
@@ -277,12 +280,15 @@ fun AmharicKeyboardMainApp(initialTab: Int = 0) {
                         shiftState = sandboxShift,
                         mode = sandboxMode,
                         activeOverlay = sandboxOverlay,
+                        englishSuggestions = englishSuggestions,
                         recentClips = recentClips,
                         preferences = preferences,
                         onKeyAction = { action ->
                             when (action) {
                                 is KeyAction.Text -> {
                                     if (sandboxMode == TransliterationMode.AMHARIC && action.char.length == 1 && action.char[0].isLetter()) {
+                                        englishWordBuffer = ""
+                                        englishSuggestions = emptyList()
                                         val step = sandboxEngine.onCharacterInput(action.char[0])
                                         if (step.committedText.isNotEmpty()) {
                                             textOutput += step.committedText
@@ -306,6 +312,15 @@ fun AmharicKeyboardMainApp(initialTab: Int = 0) {
                                         rawBuffer = ""
                                         candidates = emptyList()
                                         textOutput += action.char
+                                        if (sandboxMode == TransliterationMode.ENGLISH) {
+                                            if (action.char.length == 1 && action.char[0].isLetter()) {
+                                                englishWordBuffer += action.char
+                                                englishSuggestions = EnglishSuggestionEngine.getSuggestions(englishWordBuffer)
+                                            } else {
+                                                englishWordBuffer = ""
+                                                englishSuggestions = emptyList()
+                                            }
+                                        }
                                     }
                                     if (sandboxShift == ShiftState.ONCE) sandboxShift = ShiftState.OFF
                                 }
@@ -331,6 +346,14 @@ fun AmharicKeyboardMainApp(initialTab: Int = 0) {
                                             }
                                         }
                                     } else {
+                                        if (sandboxMode == TransliterationMode.ENGLISH) {
+                                            if (englishWordBuffer.isNotEmpty()) {
+                                                englishWordBuffer = englishWordBuffer.dropLast(1)
+                                                englishSuggestions = EnglishSuggestionEngine.getSuggestions(englishWordBuffer)
+                                            } else {
+                                                englishSuggestions = emptyList()
+                                            }
+                                        }
                                         if (textOutput.isNotEmpty()) {
                                             textOutput = textOutput.dropLast(1)
                                         }
@@ -343,6 +366,8 @@ fun AmharicKeyboardMainApp(initialTab: Int = 0) {
                                     composingChar = ""
                                     rawBuffer = ""
                                     candidates = emptyList()
+                                    englishWordBuffer = ""
+                                    englishSuggestions = emptyList()
 
                                     val words = textOutput.trimEnd().split(Regex("\\s+"))
                                     val count = action.count.coerceAtMost(words.size)
@@ -356,6 +381,8 @@ fun AmharicKeyboardMainApp(initialTab: Int = 0) {
                                     composingChar = ""
                                     rawBuffer = ""
                                     candidates = emptyList()
+                                    englishWordBuffer = ""
+                                    englishSuggestions = emptyList()
                                     textOutput += if (preferences.useAmharicWordDivider && sandboxMode == TransliterationMode.AMHARIC) "፡" else " "
                                 }
                                 is KeyAction.Enter -> {
@@ -365,6 +392,8 @@ fun AmharicKeyboardMainApp(initialTab: Int = 0) {
                                     composingChar = ""
                                     rawBuffer = ""
                                     candidates = emptyList()
+                                    englishWordBuffer = ""
+                                    englishSuggestions = emptyList()
                                     textOutput += "\n"
                                 }
                                 is KeyAction.Shift -> {
@@ -381,6 +410,8 @@ fun AmharicKeyboardMainApp(initialTab: Int = 0) {
                                     composingChar = ""
                                     rawBuffer = ""
                                     candidates = emptyList()
+                                    englishWordBuffer = ""
+                                    englishSuggestions = emptyList()
                                     sandboxMode = if (sandboxMode == TransliterationMode.AMHARIC) TransliterationMode.ENGLISH else TransliterationMode.AMHARIC
                                 }
                                 is KeyAction.SwitchIme -> {
@@ -424,12 +455,22 @@ fun AmharicKeyboardMainApp(initialTab: Int = 0) {
                             }
                         },
                         onSelectCandidate = { candidate ->
-                            textOutput += candidate
-                            sandboxEngine.reset()
-                            isComposing = false
-                            composingChar = ""
-                            rawBuffer = ""
-                            candidates = emptyList()
+                            if (sandboxMode == TransliterationMode.ENGLISH) {
+                                if (englishWordBuffer.isNotEmpty() && textOutput.endsWith(englishWordBuffer)) {
+                                    textOutput = textOutput.dropLast(englishWordBuffer.length) + "$candidate "
+                                } else {
+                                    textOutput += "$candidate "
+                                }
+                                englishWordBuffer = ""
+                                englishSuggestions = emptyList()
+                            } else {
+                                textOutput += candidate
+                                sandboxEngine.reset()
+                                isComposing = false
+                                composingChar = ""
+                                rawBuffer = ""
+                                candidates = emptyList()
+                            }
                         },
                         onClearText = {
                             textOutput = ""
@@ -497,6 +538,7 @@ fun KeyboardSandboxScreen(
     shiftState: ShiftState,
     mode: TransliterationMode,
     activeOverlay: KeyboardOverlay,
+    englishSuggestions: List<String> = emptyList(),
     recentClips: List<String>,
     preferences: KeyboardPreferencesData,
     onKeyAction: (KeyAction) -> Unit,
@@ -764,6 +806,7 @@ fun KeyboardSandboxScreen(
                 composingChar = composingChar,
                 rawBuffer = rawBuffer,
                 candidates = candidates,
+                englishSuggestions = englishSuggestions,
                 recentClips = recentClips,
                 pinnedClips = preferences.pinnedClips,
                 preferences = preferences,

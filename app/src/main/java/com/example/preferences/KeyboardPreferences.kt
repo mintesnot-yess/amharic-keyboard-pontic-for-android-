@@ -66,14 +66,7 @@ data class KeyboardPreferencesData(
     val pinnedClips: Set<String> = DEFAULT_PINNED_CLIPS
 ) {
     companion object {
-        val DEFAULT_PINNED_CLIPS = setOf(
-            "ሰላም ጤና ይስጥልኝ!",
-            "አመሰግናለሁ!",
-            "እንደምን አለህ?",
-            "መልካም ቀን ይሁንልህ!",
-            "እግዚአብሔር ይመስገን",
-            "እሺ"
-        )
+        val DEFAULT_PINNED_CLIPS = emptySet<String>()
     }
 }
 

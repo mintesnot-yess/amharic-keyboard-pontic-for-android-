@@ -57,6 +57,7 @@ fun KeyboardLayout(
     composingChar: String,
     rawBuffer: String,
     candidates: List<CandidateItem>,
+    englishSuggestions: List<String> = emptyList(),
     recentClips: List<String> = emptyList(),
     pinnedClips: Set<String> = KeyboardPreferencesData.DEFAULT_PINNED_CLIPS,
     preferences: KeyboardPreferencesData = KeyboardPreferencesData(),
@@ -84,7 +85,7 @@ fun KeyboardLayout(
             KeyboardToolbar(
                 mode = mode,
                 activeOverlay = activeOverlay,
-                isNumberRowActive = preferences.showNumberRow,
+                isNumberRowActive = preferences.showNumberRow || mode == TransliterationMode.ENGLISH,
                 scheme = scheme,
                 onAction = onKeyAction
             )
@@ -96,6 +97,7 @@ fun KeyboardLayout(
                     composingChar = composingChar,
                     rawBuffer = rawBuffer,
                     candidates = candidates,
+                    englishSuggestions = englishSuggestions,
                     mode = mode,
                     scheme = scheme,
                     fontSize = preferences.candidateFontSize,
@@ -189,8 +191,9 @@ private fun QwertyPage(
             .fillMaxWidth()
             .padding(horizontal = 2.dp)
     ) {
-        // Optional Dedicated Number Row for Addresses and Dates
-        if (preferences.showNumberRow) {
+        // Dedicated Number Row: Always ON when mode is English ("now show the number row always on when the languages is english")
+        val isNumberRowVisible = preferences.showNumberRow || mode == TransliterationMode.ENGLISH
+        if (isNumberRowVisible) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

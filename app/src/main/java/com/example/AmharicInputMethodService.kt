@@ -34,6 +34,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.example.engine.AmharicTransliterationEngine
 import com.example.engine.BackspaceStep
 import com.example.engine.CandidateItem
+import com.example.engine.EnglishSuggestionEngine
 import com.example.ime.KeyAction
 import com.example.ime.KeyboardLayout
 import com.example.ime.KeyboardOverlay
@@ -79,6 +80,8 @@ class AmharicInputMethodService : InputMethodService(),
     private var composingChar by mutableStateOf("")
     private var rawBuffer by mutableStateOf("")
     private var candidates by mutableStateOf<List<CandidateItem>>(emptyList())
+    private var englishWordBuffer by mutableStateOf("")
+    private var englishSuggestions by mutableStateOf<List<String>>(emptyList())
     private var preferences by mutableStateOf(KeyboardPreferencesData())
     private var recentClips by mutableStateOf<List<String>>(emptyList())
 
@@ -129,6 +132,7 @@ class AmharicInputMethodService : InputMethodService(),
                         composingChar = composingChar,
                         rawBuffer = rawBuffer,
                         candidates = candidates,
+                        englishSuggestions = englishSuggestions,
                         recentClips = recentClips,
                         pinnedClips = preferences.pinnedClips,
                         preferences = preferences,
@@ -274,6 +278,8 @@ class AmharicInputMethodService : InputMethodService(),
         val ic = currentInputConnection ?: return
 
         if (currentMode == TransliterationMode.AMHARIC && text.length == 1 && text[0].isLetter()) {
+            englishWordBuffer = ""
+            englishSuggestions = emptyList()
             val ch = text[0]
             val step = engine.onCharacterInput(ch)
 
@@ -298,6 +304,16 @@ class AmharicInputMethodService : InputMethodService(),
             // Direct text input
             commitAnyPending()
             ic.commitText(text, 1)
+
+            if (currentMode == TransliterationMode.ENGLISH) {
+                if (text.length == 1 && text[0].isLetter()) {
+                    englishWordBuffer += text
+                    englishSuggestions = EnglishSuggestionEngine.getSuggestions(englishWordBuffer)
+                } else {
+                    englishWordBuffer = ""
+                    englishSuggestions = emptyList()
+                }
+            }
         }
 
         // If shift was ONCE, revert to OFF
@@ -339,6 +355,14 @@ class AmharicInputMethodService : InputMethodService(),
                 }
             }
         } else {
+            if (currentMode == TransliterationMode.ENGLISH) {
+                if (englishWordBuffer.isNotEmpty()) {
+                    englishWordBuffer = englishWordBuffer.dropLast(1)
+                    englishSuggestions = EnglishSuggestionEngine.getSuggestions(englishWordBuffer)
+                } else {
+                    englishSuggestions = emptyList()
+                }
+            }
             val selected = ic.getSelectedText(0)
             if (!selected.isNullOrEmpty()) {
                 ic.commitText("", 1)
@@ -388,6 +412,8 @@ class AmharicInputMethodService : InputMethodService(),
     private fun handleSpace() {
         val ic = currentInputConnection ?: return
         commitAnyPending()
+        englishWordBuffer = ""
+        englishSuggestions = emptyList()
 
         if (preferences.useAmharicWordDivider && currentMode == TransliterationMode.AMHARIC) {
             ic.commitText("፡", 1)
@@ -399,6 +425,8 @@ class AmharicInputMethodService : InputMethodService(),
     private fun handleEnter() {
         val ic = currentInputConnection ?: return
         commitAnyPending()
+        englishWordBuffer = ""
+        englishSuggestions = emptyList()
 
         val editorInfo = currentInputEditorInfo
         val imeAction = editorInfo?.imeOptions?.and(EditorInfo.IME_MASK_ACTION)
@@ -411,8 +439,17 @@ class AmharicInputMethodService : InputMethodService(),
 
     private fun handleCandidateSelection(candidate: String) {
         val ic = currentInputConnection ?: return
-        ic.commitText(candidate, 1)
-        resetTransliterationState()
+        if (currentMode == TransliterationMode.ENGLISH) {
+            if (englishWordBuffer.isNotEmpty()) {
+                ic.deleteSurroundingText(englishWordBuffer.length, 0)
+            }
+            ic.commitText("$candidate ", 1)
+            englishWordBuffer = ""
+            englishSuggestions = emptyList()
+        } else {
+            ic.commitText(candidate, 1)
+            resetTransliterationState()
+        }
     }
 
     private fun commitAnyPending() {
@@ -431,6 +468,8 @@ class AmharicInputMethodService : InputMethodService(),
         composingChar = ""
         rawBuffer = ""
         candidates = emptyList()
+        englishWordBuffer = ""
+        englishSuggestions = emptyList()
     }
 
     private fun playFeedback() {

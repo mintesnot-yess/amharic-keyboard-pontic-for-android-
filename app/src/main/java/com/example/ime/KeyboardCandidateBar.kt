@@ -25,15 +25,13 @@ import com.example.engine.CandidateItem
 import com.example.preferences.CandidateFontSize
 import com.example.ui.theme.KeyboardColorScheme
 
-val DEFAULT_QUICK_PHRASES = listOf("ሰላም", "ጤና ይስጥልኝ", "አመሰግናለሁ", "አዎ", "አይ", "እንዴት ነህ", "መልካም ቀን", "፡", "።", "፣")
-val DEFAULT_ENGLISH_QUICK_PHRASES = listOf("Hello", "Thanks", "Yes", "No", "How are you", "Good day", "Please", "Okay")
-
 @Composable
 fun KeyboardCandidateBar(
     isComposing: Boolean,
     composingChar: String,
     rawBuffer: String,
     candidates: List<CandidateItem>,
+    englishSuggestions: List<String> = emptyList(),
     mode: TransliterationMode,
     scheme: KeyboardColorScheme,
     fontSize: CandidateFontSize = CandidateFontSize.NORMAL,
@@ -42,22 +40,31 @@ fun KeyboardCandidateBar(
 ) {
     val scrollState = rememberScrollState()
 
+    // In Amharic mode with no active composition, or English mode with no suggestions, hide bar height to save vertical screen real estate
+    val hasContent = (mode == TransliterationMode.AMHARIC && isComposing && candidates.isNotEmpty()) ||
+            (mode == TransliterationMode.ENGLISH && englishSuggestions.isNotEmpty())
+
+    if (!hasContent) {
+        // As requested: "on top no need in amharic suggestion words in"
+        // Return without rendering canned phrase clutter
+        return
+    }
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .height(42.dp),
-        color = scheme.candidateBackground,
-        shadowElevation = 1.dp
+            .height(40.dp),
+        color = scheme.candidateBackground
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 3.dp)
+                .padding(horizontal = 6.dp, vertical = 2.dp)
                 .horizontalScroll(scrollState),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (isComposing && candidates.isNotEmpty()) {
+            if (mode == TransliterationMode.AMHARIC && isComposing && candidates.isNotEmpty()) {
                 // Active composing indicator badge
                 Box(
                     modifier = Modifier
@@ -74,7 +81,7 @@ fun KeyboardCandidateBar(
                     )
                 }
 
-                // Family candidates
+                // Family candidates (Ge'ez syllable orders)
                 candidates.forEach { candidate ->
                     val isSelected = candidate.geezChar == composingChar
                     Box(
@@ -107,42 +114,22 @@ fun KeyboardCandidateBar(
                         }
                     }
                 }
-            } else {
-                // Mode indicator chip
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(
-                            if (mode == TransliterationMode.AMHARIC) scheme.candidateBadgeBackground
-                            else scheme.keySpecialBackground
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = if (mode == TransliterationMode.AMHARIC) "አማ (Phonetic)" else "EN",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (mode == TransliterationMode.AMHARIC) scheme.candidateBadgeTextColor
-                        else scheme.keyTextColor
-                    )
-                }
-
-                val phrases = if (mode == TransliterationMode.AMHARIC) DEFAULT_QUICK_PHRASES else DEFAULT_ENGLISH_QUICK_PHRASES
-
-                phrases.forEach { phrase ->
+            } else if (mode == TransliterationMode.ENGLISH && englishSuggestions.isNotEmpty()) {
+                // English auto-complete / predictive suggestions
+                englishSuggestions.forEach { word ->
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(scheme.keyBackground)
-                            .clickable { onSelectCandidate(phrase) }
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                            .testTag("quick_phrase_$phrase"),
+                            .clickable { onSelectCandidate(word) }
+                            .padding(horizontal = 14.dp, vertical = 5.dp)
+                            .testTag("english_suggestion_$word"),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = phrase,
+                            text = word,
                             fontSize = fontSize.size,
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.SemiBold,
                             color = scheme.keyTextColor
                         )
                     }

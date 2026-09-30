@@ -27,7 +27,7 @@ class KeyboardInteractionTest {
     @Test
     fun testSpacebarClickCallsAction() {
         var actionReceived: KeyAction? = null
-        val scheme = KeyboardThemes.SYSTEM_DYNAMIC_DARK
+        val scheme = KeyboardThemes.AbyssinianHeritage
 
         composeTestRule.setContent {
             KeyboardKey(
@@ -46,7 +46,7 @@ class KeyboardInteractionTest {
     @Test
     fun testBackspaceClickCallsAction() {
         var actionReceived: KeyAction? = null
-        val scheme = KeyboardThemes.SYSTEM_DYNAMIC_DARK
+        val scheme = KeyboardThemes.AbyssinianHeritage
 
         composeTestRule.setContent {
             KeyboardKey(
@@ -79,5 +79,20 @@ class KeyboardInteractionTest {
         val defaultPrefs = KeyboardPreferencesData(showNumberRow = false)
         val toggled = defaultPrefs.copy(showNumberRow = !defaultPrefs.showNumberRow)
         assertTrue(toggled.showNumberRow)
+    }
+
+    @Test
+    fun testEnglishSuggestionEngine() {
+        val suggestions = com.example.engine.EnglishSuggestionEngine.getSuggestions("hel")
+        assertTrue(suggestions.isNotEmpty())
+        assertTrue(suggestions.contains("hello") || suggestions.contains("help"))
+
+        val capitalized = com.example.engine.EnglishSuggestionEngine.getSuggestions("Hel")
+        assertTrue(capitalized.first()[0].isUpperCase())
+    }
+
+    @Test
+    fun testClipboardHasNoPresetSuggestions() {
+        assertTrue(KeyboardPreferencesData.DEFAULT_PINNED_CLIPS.isEmpty())
     }
 }
